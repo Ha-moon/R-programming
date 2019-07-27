@@ -1,0 +1,129 @@
+# 영화 리뷰 텍스트 마이닝
+
+# KoNLP 라이브러리가 JAVA에 의존하고 있기 때문에 설치해야함
+library(rJava)
+
+
+# 텍스트 마이닝 시각화
+install.packages("wordcloud2")
+install.packages("tm")
+library(wordcloud2)
+library(tm)
+
+# R에서 다양한 색깔을 선택할 수 있게 해주는 라이브러리
+library(RColorBrewer)
+
+
+# 텍스트 마이닝 패키지
+install.packages('C:/Program Files/NLP4kec', ##이부분 다운로드실패
+                 repos = NULL)
+library(NLP4kec)
+
+
+
+####### 중요 #######
+# 텍스트 마이닝 전처리 #카톡에 의미없는 ㅋㅋ ㅠㅠ이런거 지우기...
+result$lyric %>%
+  #소문자 영어 지우기
+  str_remove_all(pattern = '[a-z]')%>%
+  #대문자 영어 지우기
+  str_remove_all(pattern = '[A-Z]')%>%
+  #ㅋㅋㅋ ㅠㅠㅠ ㅎㅎㅎ 지우기
+  str_remove_all(pattern = '[ㄱ-ㅣ]')%>%
+  #숫자 지우기
+  str_remove_all(pattern = '[0-9]')%>%
+  #각종 특수기호 지우기
+  str_remove_all(pattern = '[~!@#$%^&*()_+.\\n\;🦁🐺🦌🐉]❤️')%>% #\는 다른거로 넘어갈때
+  #blank지우기
+  str_remove_all(pattern = '[ ]')%>%
+  #양옆 공백 제거
+  str_trim() %>%
+
+
+# 전처리를 거친 결과 아무것도 남지 않은 문장 지우기
+library(dplyr)
+result<-result %>%
+  dplyr::filter(review !='') #공백이 아닌사람만 result에 넣어줌
+
+
+# 형태소 분석  
+parse<-r_parser_r(contentVector = result$review, language = 'ko')
+
+# 확인
+parsed[50]
+
+
+# 말뭉치(자료구조)를 생성
+corpus<-parsed %>% VectorSource() %>%VCorpus()
+
+
+
+# 각각의 문서 확인
+# corpus는 형태소 분석에 사용된 문서를 개별 원소로 갖는 리스트
+# [[ ]] : list자료구조 표시
+inspcet(corpus[1])
+
+
+
+# 단어 문사 행렬 만들기
+# 행에는 문서 / 열에는 단어
+# 2음절 이상인 단어만 남기는 것으로 설정하였습니다.
+dtm<-DocumentTermMatrix(x=corpus,
+                   control = list(wordLengths = c(2,Inf),
+                                  stopwords=c('응','네','넵'))) #텍스트마이닝할때 필요없는 글자 지우기
+
+
+
+# 차원을 확인합니다.
+dim(dtm)
+inspect(dtm)
+
+
+
+# 단어의 수가 많으므로 term-frequency가 희박한(sparse) 컬럼을 제거하는 방식으로 
+# dtm의 차원을 줄입니다. 
+# sparse의 인자가 작을수록 dtm의 열 개수가 크게 줄어드는 효과가 있습니다 
+dtm_remove<-removeSparseTerms(x=dtm, sparse=0.99)
+
+
+# 차원을 확인합니다.
+dim(dtm_remove)
+
+# 단어 문서 행렬 확인
+inspect(dtm_remove)
+
+
+# 행렬로 변환
+mat<-as.matrix(dtm_remove)
+
+
+# 동사 제거
+colnames(mat)
+mat2<-mat[, colnames(mat) %>% str_sub(-1) !="다"]
+
+
+# 열을 기준으로 단어의 수 확인
+# 참고)apply(자료구조, 1(행) or 2(열), 사용할 함수)
+word <- apply(mat2, 2, sum) %>% sort(decreasing = TRUE)
+
+
+# data.frame()으로 변환
+df<-data.frame(word = names(word), freq=word)
+
+
+# 행 이름 변경
+rownames(df) <-seq(from=1, to=nrow(df), by=1) #행이름 1~..숫자로 바꾸기
+df
+
+#막대그래프 그리기
+library(ggplot2)
+
+df %>%
+  arrange(desc(freq)) %>%
+  head(10)%>%
+  ggplot(mapping = aes(x=reorder(word,-freq), y=freq, fill=word)) +
+  geom_bar(stat= "identity")
+
+
+# 시각화
+wordcloud2(df)
