@@ -1,0 +1,39 @@
+# Wordcloud2 시각화 
+
+# 라이브러리 로드
+
+
+# 숫자가 300개 넘어가면 워드클라우드가 예쁘게 그려지지 않습니다. 
+# shape option = 'circle', cardioid',  ‘diamond’ ,'triangle-forward', 'triangle', 'pentagon', 'star'
+wordcloud2(
+  data = df, #원본데이터
+  size =0.8, #글자크기
+  fontFamily = 'NanumGothic', #글씨체
+  color = "random-light", #글씨색
+  backgroundColor = 'gray', #배경색
+  shape = 'star', #모양
+  shuffle = TRUE, #단어들 랜덤 추출
+  rotateRatio = 0.25 #글자들 얼마나 기울어졌는지
+)
+
+## 워드 클라우드가 다 그려질 때까지 충분히 기다리기
+
+# --------------------------------------------------------------------------------
+
+# 트리맵 시각화  
+
+# 라이브러리 로드
+install.packages("treemap")
+library(treemap)
+
+# 고빈도 단어 트리맵을 그리기 
+treemap(
+  dtf = df, #원본 데이터
+  title = '고빈도 단어 트리맵', #제목
+  index = c('word'), #상자 안에 들어갈 내용
+  vSize = 'freq', #상자 크기
+  fontfamily.labels = 'NanumGothic', #폰트 글씨체 
+  fontfamily.labels = 14, #폰트 글씨사이즈
+  border.col = 'white' #경계색깔
+)
+str(df)
