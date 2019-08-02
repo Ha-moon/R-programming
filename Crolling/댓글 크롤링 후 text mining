@@ -1,0 +1,101 @@
+# 알라딘 영화 리뷰 100개를 수집
+# 실행할때 아래와같은 에러가 발생할 경우에는 
+# read_html() -> read_html(options = "HUGE") 이렇게 안에 options = "HUGE"를 줘야합니다! 
+# Error in doc_parse_raw(x, encoding = encoding, base_url = base_url, as_html = as_html,  : 
+# Excessive depth in document: 256 use XML_PARSE_HUGE option
+
+library(httr)
+library(urltools)
+library(rvest)
+library(jsonlite)
+library(dplyr)
+library(stringr)
+
+
+result<-data.frame()
+'https://movie.naver.com/movie/bi/mi/review.nhn?code=163788'
+'/movie/bi/mi/review.nhn?code=163788'
+'/movie/bi/mi/review.nhn?code=163788&page=2'
+
+for (i in 1:10){ #댓글 페이지 번호
+  
+    res <- GET(url = str_c('https://movie.naver.com/movie/bi/mi/review.nhn'),
+               query = list(code = '163788',
+                            code = i))
+
+    #p태그 클래스 아이디 없음 ->올라가면 ul이 클래스!<-얘쓰기
+    code<-res %>%
+      read_html(options = "HUGE")%>%
+      html_nodes(css = 'ul.rvw_list_area > li > p > a') %>%
+      html_attr('onclick')%>%
+      str_sub(start=-9, end=-3)
+    
+    for(j in 1:10){ #각 페이지 마다 모았던 코드 10개
+      res2 <- GET(url = str_c('https://movie.naver.com/movie/bi/mi/reviewread.nhn'),
+                  query = list(nid= code[j],
+                               code='163788'))
+      
+      review<-res2 %>%
+        read_html()%>%
+        html_nodes(css = 'div.user_tx_area') %>%
+        html_text()%>%
+        str_trim()
+      
+      result <-rbind(result,data.frame(review = review))
+      
+      cat('현재 ',i,'페이지, 댓글 ', j, '개 수집완료 \n')
+      
+      Sys.sleep(0.5)
+      }
+}
+
+View(result)
+
+install.packages("RmecabKo")
+RmecabKo::install_mecab("c:/mecab")
+install.packages("RcppMeCab")
+library(RcppMeCab)
+
+pos('안녕하세요'%>% iconv(to='UTF-8'), format='data.frame')
+
+result$review<-as.character(result$review)
+
+pos(result$review[1], format='data.frame') %>%
+  filter(pos %in% c('NNG', 'VV', 'VA'))
+#http://kkma.snu.ac.kr/documents/?doc=algorithm 참고!
+
+result$lyric %>%
+  #소문자 영어 지우기
+  str_remove_all(pattern = '[a-z]')%>%
+  #대문자 영어 지우기
+  str_remove_all(pattern = '[A-Z]')%>%
+  #ㅋㅋㅋ ㅠㅠㅠ ㅎㅎㅎ 지우기
+  str_remove_all(pattern = '[ㄱ-ㅣ]')%>%
+  #숫자 지우기
+  str_remove_all(pattern = '[0-9]')%>%
+  #각종 특수기호 지우기
+  str_remove_all(pattern = '[~!@#$%^&*_.]')%>%
+  str_trim()
+
+result2<-data.frame()
+for(i in 1:nrow(result)) {
+  parse<-pos(result$review[i], format='data.frame') %>%
+    filter(pos %in% c('NNG', 'VV', 'VA'))
+  string<-''
+for(j in 1:nrow(parse)){
+  string<-paste(string, parse$token[j])
+  }
+  result2<-rbind(result2, data.frame(review =string))
+}
+
+result$review <-as.character(result$review)
+
+library(tm)
+corpus<-result2$review %>% VectorSource() %>% VCorpus()
+dtm <-DocumentTermMatrix(x=corpus,
+                         control =list(stopwords=c('영화')))
+
+inspect(dtm)
+
+dtm_remove<-removeSparseTerms(x=dtm, sparse = 0.99) #100번중에 1번꼴로 나ㅏ온건 지우겠다
+inspect(dtm_remove)
