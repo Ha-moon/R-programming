@@ -1,0 +1,41 @@
+# 가중치 없는 knn 분류모형을 적합해보기 
+###실제로는 가중치를 줘야함. K=5로 잡아서 파랑이 더 많아 파랑으로 결과가 나왔는데 실제로는 빨강과 가까이있으면 오류..때문에 빨강과의 거리에 더 가중치를 줘야함.
+# 필요한 패키지를 불러오기
+install.packages("class")
+library(class)
+
+
+# set.seed를 지정
+set.seed(321)
+
+
+# 가중치 없는 KNN 분류모형을 적합 
+fitknn<-knn(train = trainSet[,1:11],  #70퍼 학습시키는 것
+        test = testSet[,1:11],    #30퍼 test할것
+        cl=trainSet$grade,        #train값들이 각각 good인지 best인지->cl에 넣기
+        k=nrow(trainSet)%>%sqrt()%>%ceiling(),
+        prob=TRUE) #확률을 보고싶으면 TRUE
+
+
+# 예측값의 첫 100개만 미리보기 
+fitknn[1:100]
+
+# 예측값을 pred 객체에 할당
+pred <- fitknn
+
+# 시험셋의 grade를 real 객체에 할당 
+real<-testSet$grade
+
+# 실제값과 예측값의 빈도수를 비교 
+table(real, pred) %>% addmargins()
+
+
+###정확도=맞춘것/전체 : (84+1112)/1469
+
+# 분류모형의 성능을 평가 
+
+# 혼동행렬을 출력
+install.packages("e1071")
+library(e1071)
+caret::confusionMatrix(real, pred)
+####처음에 good데이터가 많았으므로 good이 많이 나온것뿐! 잘나온게 아님.->이런건knn말고 다른 알고리즘으로 해야됨!!
