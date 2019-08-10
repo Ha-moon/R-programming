@@ -1,0 +1,80 @@
+library(httr)
+library(urltools)
+library(rvest)
+library(stringr)
+
+library(dplyr)
+library(ggplot2)
+# 가중치 없는 knn 분류모형 실습
+
+# 인터넷에 공유되고 있는 와인 데이터 경로를 지정 
+path <- 'https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-white.csv'
+
+# 와인 데이터를 불러오기
+wine <-read.csv(file = path, sep =";")
+###실제로 나중에 분석할땐 그 데이터의 지식(도메인지식)을 잘알아야한다!
+###7.3이와인도수가 높은지 낮은지/야구 5할인 사람은 적게친거니까 데이터에서 제외해야됨!
+
+# 와인 데이터의 구조를 파악 
+str(object=wine)
+
+
+# 첫 10 행을 미리보기 합니다.
+head(wine, n=10L)
+tail(wine, 10)
+
+boxplot(wine$fixed.acidity)
+
+# 목표변수로 사용할 quality 컬럼의 빈도수를 확인 
+summary(wine)
+###1st Qu(1분위수) 3rd Qu(3분위수):1~100까지에서 4로 나눴을때 나오는 값 1,3번값
+
+table(wine$quality)
+
+# 목표변수를 새로 만들기
+# quality 값이 3~6점이면 'good', 7~9점이면 'best'를 할당. 
+wine$grade <- ifelse (wine$quality<=6, "good", "best")
+head(wine)
+str(wine)
+# 새로 만든 목표변수를 범주형으로 변환
+wine$grade<- as.factor(wine$grade)
+str(wine) ##나온값에서 2는good을 뜻함
+
+
+# knn 알고리즘은 유사도의 척도로 거리를 이용하기 때문에 실행에 앞서 
+# 11개(quality, grade는 우리가 만든거니까 빼고 나머지데이터) 입력변수만으로
+#표준화(Z=x-평균/표준편차)한 다음 데이터 프레임으로 변환. 중요!!!!
+#center = 평균, scale=표준편차
+wineScaled <- scale(wine[,1:11], center = TRUE, scale=TRUE) %>% as.data.frame()
+
+str(wineScaled)
+# 표준화된 데이터에 목표변수를 추가 
+wineScaled$grade <-wine$grade
+
+
+###데이터 중에 70%는 학습, 30%는 test하는 걸로 설정
+###그중에 70%중 정확도를 올리기 위해서는 같은 데이터에서 뽑아야하므로
+# 같은 결과를 얻기 위해 seed를 설정
+set.seed(321)
+
+
+# 전체 데이터셋의 70%를 훈련용, 30%를 시험용 데이터로 분리
+install.packages("caret")
+library(caret)
+index <- createDataPartition(y=wineScaled$grade, p=0.7,list=FALSE)
+
+
+# index에 따라서 trainSet, testSet 구분
+#학습(70% 3429개의 data)
+trainSet<-wineScaled[index, ]
+nrow(trainSet)
+
+#test(30% 1469개의 data)
+testSet<-wineScaled[-index, ] #-는 index를 제외하고 실행시키라는 의미
+nrow(testSet)
+
+
+# 훈련용, 시험용 데이터셋의 목표변수 비중을 확인  
+trainSet$grade %>% table() %>%prop.table()
+
+testSet$grade %>% table() %>%prop.table()
