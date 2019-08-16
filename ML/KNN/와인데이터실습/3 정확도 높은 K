@@ -1,0 +1,42 @@
+##미완성
+
+# 각 k에 해당하는 정확도를 데이터프레임에 저장
+# ex)   k    accuracy
+#       1     0.8421
+#       2     0.8334
+#         .....
+#      59     0.8235
+
+library(class)
+library(e1071)
+result<-data.frame()
+
+str(trainSet)
+for(i in 1:59){
+  
+  fitknn<-knn(train = trainSet[,1:11],  
+              test = testSet[,1:11],   
+              cl=trainSet$grade,       
+              k=i,
+              prob=TRUE)
+  
+  pred <- fitknn
+  real<-testSet$grade
+  
+  cm<-confusionMatrix(real, pred)
+  accuracy<-cm$overall['Accuracy'] ##Accuracy가 good을 good으로, best를 best로 잘 담은것
+  
+  result<-rbind(result, data.frame(k=i, accuracy=accuracy))
+}
+
+rownames(result)<- seq(from=1, to=nrow(result), by=1)
+
+result %>%
+  arrange(desc(accuracy)) %>%
+  ggplot(mapping = aes(x=k, y=accuracy)) +
+  geom_line()+
+  geom_point()
+
+
+##k=1일때 정확도가 가장 높이 나왔지만 잘못된것! good이 많으므로..
+##이웃의 개수가 적으면 정확도 떨어지므로 k=5보다 클경우를 볼때 가장 정확도 높은것은 k=9일때로 분석했습니다.
