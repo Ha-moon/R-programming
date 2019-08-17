@@ -1,0 +1,26 @@
+###실제로는 가중치를 줘야함.
+#EX) K=5로 잡아서 파랑이 더 많아 파랑으로 결과가 나왔는데 실제로는 빨강과 가까이있으면 오류..때문에 빨강과의 거리에 더 가중치를 줘야함.
+##멀수록 가중치 적도록->'역수'
+
+# 가중치 K-NN 적합
+library(kknn)
+
+#유클리디안 거리의 역수로 가중치를 준 knn 분류모형을 적합 
+fitkknn<-kknn(formula = grade ~.,  ##.은 나머지 다 를 의미.
+         train = trainSet,
+         test = testSet,
+         k = 9,
+         distance = 2,  #1:맨해튼 거리, 2:유클리디안 거리
+         kernel = "triangular") ##커널이란..거리가 멀수록 가중치작게하는 여러가지 방식. 이 모델에서는 triangular가 가장 좋았음.
+
+
+# 예측값을 predBalW 객체에 할당
+predBalw<- fitkknn$fitted.values
+
+# 시험셋의 grade를 real 객체에 할당 
+real<- testSet$grade
+
+# 실제값과 예측값의 빈도수를 비교 
+
+# 혼동행렬을 출력
+confusionMatrix(real, pred)
