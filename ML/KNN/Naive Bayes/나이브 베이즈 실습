@@ -37,3 +37,61 @@ for(i in 2:8){
 
 # 데이터의 구조를 확인
 str(dt)
+
+
+
+# 나이브 베이즈 분류모형을 적용 
+
+# 필요 패키지를 불러옵니다.
+library(naivebayes)
+
+# 라플라스 스무딩을 적용하기 전 분류모형을 적용 
+fitnb<- naive_bayes(formula = 장르 ~., data = dt, laplace =0)
+
+# fitNB0 객체의 구조를 확인
+class(fitnb)
+
+# 사전확률 출력 
+pre<-fitnb$prior
+
+# 재미있는, 맹렬한, 빠른 컬럼에 대한 가능도(likelihood)를 출력 
+l1<-fitnb$tables$재미있는[2,2]
+l2<-fitnb$tables$맹렬한[2,2]
+l3<-fitnb$tables$빠른[2,2]
+
+# 코미디일 사후확률을 계산
+comedy<-pre[2] *l1*l2*l3
+comedy  ##맹렬한 이 없으므로 0나옴!
+
+# 액션일 사후확률을 계산
+l1<-fitnb$tables$재미있는[2,1]
+l2<-fitnb$tables$맹렬한[2,1]
+l3<-fitnb$tables$빠른[2,1]
+
+action <-pre[1] *l1*l2*l3
+action
+
+##action이 더 높게나옴. 액션일 확률이 큰것!
+
+# 3개의 단어(재미있는, 맹렬한, 빠른)가 yes인 시험셋 데이터 프레임을 생성 
+test <- data.frame(재미있는 = 'yes', 
+                       연인 = 'no', 
+                       사랑 = 'no', 
+                       맹렬한 = 'yes', 
+                       빠른 = 'yes', 
+                       총격 = 'no', 
+                       날으는 = 'no')
+
+# 모두 범주형으로 생성 
+for(i in 1:7){
+  test[,i] = factor(x = test[,i],levels = c('no', 'yes'))
+}
+
+# 데이터 구조를 파악
+str(test)
+
+# 시험셋으로 적합된 분류모형을 통해 추정 <레이블>을 확인 
+predict(fitnb,test)
+
+# 시험셋으로 적합된 분류모형을 통해 추정 <확률>을 확인 
+predict(fitnb,test,type='prob')
