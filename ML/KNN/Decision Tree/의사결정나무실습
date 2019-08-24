@@ -1,0 +1,53 @@
+# 의사결정나무
+
+
+# 목표변수의 범주가 두 개인 Binary 의사결정나무
+# 1. 적합
+# 2. 가지치기
+# 3. 해석
+
+# 필요한 패키지를 불러오기
+library(dplyr)
+
+# 데이터를 불러옵니다. 
+bank <- read.csv(file = 'https://goo.gl/vE8GyN')
+
+# 데이터의 구조를 파악
+str(bank)
+
+# 처음 10행만 미리보기
+head(bank)
+
+
+# 목표변수 : PersonalLoan(1: 대출O, 0: 대출X)
+
+# 불필요한 컬럼 삭제 (ID & ZIP.Code)
+bank <- bank[,-c(1,5)]
+
+# 요약통계량을 확인합니다. 
+summary(bank) ##실전에선 보면서 0.5명의 가족수, 경험년도 -3 이런 말안되는 값들 지워야함.
+
+
+# 목표변수를 범주형 벡터로 변환합니다. (PersonalLoan)
+for(i in 8:12){
+    bank[, i] <-as.factor(bank[, i])
+    
+}
+
+
+# 목표변수의 범주별 비중을 확인합니다. 
+bank$PersonalLoan %>% table() %>% prop.table()
+
+
+# 전체 데이터셋의 70%를 훈련용, 30%를 시험용 데이터로 분리
+library(caret)
+
+index<- createDataPartition(bank$PersonalLoan, p=0.7, list=FALSE)
+trainSet<- bank[index,]
+testSet<- bank[-index,]
+
+# 훈련셋 목표변수의 빈도와 비중을 차례로 확인합니다. 
+trainSet$PersonalLoan %>% table() %>% prop.table()
+
+# 시험셋 목표변수의 빈도와 비중을 차례로 확인합니다. 
+testSet$PersonalLoan %>% table() %>% prop.table()
