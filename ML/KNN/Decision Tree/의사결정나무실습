@@ -51,3 +51,178 @@ trainSet$PersonalLoan %>% table() %>% prop.table()
 
 # 시험셋 목표변수의 빈도와 비중을 차례로 확인합니다. 
 testSet$PersonalLoan %>% table() %>% prop.table()
+
+# --------------------------------------------------------------------------------
+
+# Binary 의사결정나무 모형을 적합
+
+# 필요 패키지를 불러옵니다.
+install.packages("rpart")
+library(rpart)
+
+# 분류모형을 적합합니다. 
+fitTree <- rpart(formula = PersonalLoan ~ .,
+                  data = trainSet,
+                  method = 'class', #class = 분류, anova = 회귀
+                  parms = list(split ="gini"),
+                  #정지규칙
+                  #20개 미만 분리x
+                  #깊이 10이되면 분리x
+                  control = rpart.control(minsplit = 20, #20개 미만이면 더 나누지 마라.
+                                          cp =0.01, #알파값
+                                          maxdepth = 9 )) #9개 깊이 이상으로 나눠지면 멈춰라.
+      
+
+
+
+
+
+
+# 적합된 모형을 살펴봅니다.
+summary(fitTree)
+
+
+
+## 비용 복잡도를 가장 최소화
+## 그 기준으로 분리된 개수가 7입니다. 이는 끝마디의 수가 8이라는 것을 의미합니다. 
+
+## 세 번째 표는 변수별 중요도 
+## Education, Income, Family, CCAvg, CDAccount, Mortgage, Age 순으로 오분류율이 낮은 모형을 적합하는 데 기여
+
+
+## 뿌리노드에는 3,500 건의 관측값이 있는데, '0'이 3,164건이고 '1'이 336건이므로
+## 추정 라벨은 '0'이고 예상 손실은 0.096
+## 왼쪽 자식마디로 2,835건이 할당되고, 오른쪽 자식마디로는 336건이 할당
+## 여러 가지 분리규칙 중에서 Improve가 가장 큰 분리규칙이 사용 
+## 즉, Income이 114.5 미만인 건은 왼쪽 자식마디로 이동하고, 110.5 이상인 건은 오른쪽 자식마디로 이동
+
+
+# 나무모형을 텍스트로 출력합니다.
+print(fitTree)
+
+
+## 출력 결과에서 오른쪽 끝에 *가 추가된 것이 끝마디가 총 8개
+## 위에서 nsplit이 7이었기 때문에 terminal Node는 8(7+1)개
+
+
+# 이번에는 나무모형 시각ㅎ
+plot(x = fitTree, 
+     compress = TRUE,  # 좌우 폭을 줄입니다. 
+     uniform = TRUE,   # 부모마디와 자식마디 간 높이를 일정하게 맞춥니다. 
+     branch = 0.4,     # 0에 가까울수록 가지의 각도가 커집니다. 
+     margin = 0.05,    # 그림의 여백을 늘리기 때문에 그래프가 작아집니다. 
+     main = 'Classification Tree for Universal Bank')
+
+# 분리기준을 텍스트로 추가
+text(x = fitTree, 
+     use.n = TRUE,     # 끝마디의 관측값을 범주별로 출력합니다. 
+     all = TRUE,       # 전체 마디의 관측값을 범주별로 출력합니다. 
+     cex = 1.2)        # 글자의 크기를 키웁니다. 
+
+
+# rpart.plot 패키지에 있는 함수를 이용하여 보기 좋은 나무모형 시각화 
+install.packages("rpart.plot")
+library(rpart.plot)
+rpart.plot(fitTree)
+
+
+## 이 그래프의 단점은 끝마디에 속한 관측값의 수를 알 수 없음
+
+
+# 다른 함수로 나무모형 시각화 
+prp(x = fitTree, 
+    faclen = 0,    # 0을 할당하면 목표변수의 레이블을 출력합니다. 
+    extra = 101,   # 101을 할당하면 끝마디에 목표변수의 범주별 빈도수를 출력합니다. 
+    cex = 1.0)
+
+
+# 가지치기
+
+# 비용복잡도 표를 출력
+printcp(fitTree)
+
+
+
+## 분리횟수가 7인 현재 나무모형은 xerror가 가장 낮으므로 가지치기가 필요 없습니다. 
+## 하지만 가지치기 실습을 위해 정지규칙을 일부 수정하여 나무모형을 다시 적합 
+## 정지규칙을 cp = 0.001, maxdepth = 30으로 변경 
+
+# 분류모형을 다시 적합 ##과적합 한번 유도해봄..!
+fitDeep <- rpart(formula = PersonalLoan ~ .,
+                 data = trainSet,
+                 method = 'class', #class = 분류, anova = 회귀
+                 parms = list(split ="gini"),
+                 #정지규칙
+                 #20개 미만 분리x
+                 #깊이 10이되면 분리x
+                 control = rpart.control(minsplit = 20, #20개 미만이면 더 나누지 마라.
+                                         cp =0.001, #알파값
+                                         maxdepth = 30 ))
+
+
+
+printcp(fitDeep)
+
+# xerror의 최소값을 선택 
+xerror_min <- fitDeep$cptable[which.min(fitDeep$cptable[, "xerror"]), "xerror"] #which:최소값의 인덱스
+
+
+
+
+# 교차확인 상대오차 그래프를 그리기
+# X-val Relative Error : xerror
+# size of tree : nsplit + 1
+plotcp(fitDeep) #size of tree : 노드갯수 
+
+
+# minXerror 선 추가. 
+abline(h=xerror_min, col="red", lty =2) #오류가 가장 적은 노드에 빨간줄로 표시
+
+
+
+# xerror의 최소값일 때 CP를 선택
+min_cp<-fitDeep$cptable[which.min(fitDeep$cptable[, "xerror"]), "CP"]
+
+
+
+# bestCP 기준으로 가지치기(pruning)를 합니다. 
+fitPrune <- prune.rpart(tree=fitDeep, cp= min_cp)
+
+
+# 가지치기 전 나무모형을 그림으로 출력합니다. 
+prp(x = fitDeep, 
+    faclen = 1, 
+    extra = 101, 
+    cex = 0.8)
+
+# 가지치기 후 나무모형을 그림으로 출력합니다. 
+prp(x = fitPrune, 
+    faclen = 0, 
+    extra = 101, 
+    cex = 1.0)
+
+
+# --------------------------------------------------------------------------------
+
+# 가지치기 전 나무모형과 가지치기 후 나무모형의 성능을 비교
+pred_deep <- predict(object = fitDeep, newdata =testSet, type ='class')
+pred_prune <- predict(object = fitPrune, newdata =testSet, type ='class')
+
+# 각 나무모형에 시험셋을 적용하여 추정값을 만듭니다. 
+
+
+
+
+# 시험셋의 실제값을 teReal에 할당합니다.
+real <- testSet$PersonalLoan
+
+
+
+###정확도 높게나왔음..98퍼..
+
+# 첫 번째 모형의 혼동행렬 지표들을 확인합니다.
+library(e1071)
+confusionMatrix(pred_deep,real)
+confusionMatrix(pred_prune,real)
+
+##돈을 빌릴거라고 생각한 사람중 실제로 대출받을 사람 129명->높다->마케팅 진행하자.
